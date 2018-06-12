@@ -1,0 +1,55 @@
+<!-- 相机标定启动程序 -->
+<launch>
+    <!--指定USB摄像头设备编号-->
+    <arg name="video_device" value="/dev/video0" />
+    <!--画面宽度-->
+    <arg name="image_width" value="640"/> 
+    <!--画面高度-->
+    <arg name="image_height" value="480" />
+    <!--视频流编码-->
+    <arg name="pixel_format" value="yuyv" />
+    <!--设定摄像头的名字-->
+    <arg name="camera_name" value="usb_cam"/> 
+    <!--设定摄像头的Frame Id-->
+    <arg name="camera_frame_id" value="usb_cam" />
+    <!-- IO方法-->
+    <arg name="io_method" value="mmap"/>
+    <!--标定文件的路径-->
+    <arg name="camera_info_url" value="package://aruco_mapping2/data/usb_cam.yaml"/>
+    
+
+    <!-- 标定板的格子角点数 (格子行数-1) × （格子列数-1）-->
+    <arg name="chess_board_size"      value="11x7"/>
+    <!-- 格子的尺寸 -->
+    <arg name="chess_square_size" value="0.021" />
+
+    <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen">
+        <param name="video_device" value="$(arg video_device)" /> <!--指定USB摄像头设备编号-->
+        <param name="image_width" value="$(arg image_width)" /> <!--画面宽度-->
+        <param name="image_height" value="$(arg image_height)" /> <!--画面高度-->
+        <param name="pixel_format" value="$(arg pixel_format)" /> <!--视频流编码-->
+        <param name="camera_name" value="$(arg camera_name)"/> <!--设定摄像头的名字-->
+        <param name="camera_frame_id" value="$(arg camera_frame_id)" /> <!--设定摄像头的Frame Id-->
+        <param name="io_method" value="$(arg io_method)"/>
+    </node>
+    <node ns="usb_cam" name="usb_cam_image_proc" pkg="image_proc" type="image_proc"/>
+
+    <!--图像视频预览窗口-->
+    <node name="image_view" pkg="image_view" type="image_view" respawn="false" output="screen">
+        <remap from="image" to="/usb_cam/image_raw"/>
+        <!--Image必须要被Remap 暂时不清楚其机制-->
+        <!--修改为 /camera/image_raw 之后不能正确运行-->
+        <!--<param name="image" value="/camera/image_raw" />-->
+        <param name="autosize" value="true" />
+    </node>
+
+    <!--标定节点-->
+    <node name="camera_calibration" pkg="camera_calibration" type="cameracalibrator.py">
+        <!--标定棋盘中方块矩阵的个数-->
+        <param name="size" value="$(arg chess_board_size)"/>
+        <!--方块的实际尺寸,宽度 高度 单位:m-->
+        <param name="square" value="$(arg chess_square_size)"/>
+        <remap from="image" to="/usb_cam/image_raw"/>
+        <remap from="camera" to="/usb_cam"/>
+    </node>
+</launch>
